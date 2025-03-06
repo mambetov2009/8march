@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Случайные сердечки</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f0f0f0;
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .heart {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background-color: red;
+        transform: rotate(45deg);
+        animation: float 4s infinite;
+      }
+      .heart::before,
+      .heart::after {
+        content: "";
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background-color: red;
+        border-radius: 50%;
+      }
+      .heart::before {
+        top: -15px;
+        left: 0;
+      }
+      .heart::after {
+        top: 0;
+        left: -15px;
+      }
+      @keyframes float {
+        0% {
+          transform: translateY(0) scale(1);
+        }
+        50% {
+          transform: translateY(-100px) scale(1.2);
+        }
+        100% {
+          transform: translateY(0) scale(1);
+        }
+      }
+      @property --a {
+        syntax: "<angle>";
+        initial-value: 0deg;
+        inherits: false;
+      }
+      .card {
+        overflow: hidden;
+        position: relative;
+        width: 500px;
+        aspect-ratio: 1;
+        border-radius: 0.5em;
+        place-self: center;
+        place-content: center;
+        padding: 0.5em;
+        color: #ededed;
+        font: clamp(1em, 2vw + 2vh, 2em) sans-serif;
+        text-align: center;
+        text-transform: uppercase;
+        text-wrap: balance;
+        font-size: 20px;
+      }
+      .card::before {
+        position: absolute;
+        z-index: -1;
+        inset: -1em;
+        border: solid 1.25em;
+        border-image: conic-gradient(from var(--a), #7997e8, #f6d3ff) 1;
+        filter: blur(0.75em);
+        animation: a 4s linear infinite;
+        content: "";
+      }
+      @keyframes a {
+        to {
+          --a: 1turn;
+        }
+      }
+      html,
+      body,
+      div {
+        display: grid;
+      }
+
+      html {
+        min-height: 100%;
+      }
+
+      body {
+        background-color: black;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      Дорогие мои одонклассники, примите самые искренние поздравления с весенним
+      праздником — Международным женским днем 8 марта! Пусть в этот радостный
+      день Вас окружают самые близкие люди, пусть Ваши глаза светятся от счастья
+      как можно чаще! Пусть Ваш дом всегда согревает любовь и доброта!
+    </div>
+    <video style="display: none" controls autoplay loop>
+      <source src="WhatsApp Video 2025-03-05 at 23.13.47.mp4" type="" />
+    </video>
+    <script>
+      function createHeart() {
+        const heart = document.createElement("div");
+        heart.classList.add("heart");
+        document.body.appendChild(heart);
+
+        // Set random position
+        heart.style.left = Math.random() * window.innerWidth + "px";
+        heart.style.top = Math.random() * window.innerHeight + "px";
+
+        // Set random animation duration
+        const duration = Math.random() * 3 + 2;
+        heart.style.animationDuration = duration + "s";
+
+        // Remove heart after animation
+        setTimeout(() => {
+          heart.remove();
+        }, duration * 1000);
+      }
+
+      // Generate random hearts every 100ms
+      setInterval(createHeart, 100);
+    </script>
+  </body>
+</html>

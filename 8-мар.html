@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>С 8 марта!</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: linear-gradient(to top, #ffdde1, #ee9ca7);
+        overflow: hidden;
+      }
+      .container {
+        text-align: center;
+        position: relative;
+      }
+      h1 {
+        font-size: 3rem;
+        color: white;
+        text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+      }
+      .balloon {
+        position: absolute;
+        bottom: -100px;
+        width: 50px;
+        height: 70px;
+        background: radial-gradient(circle, #ff4e50, #fc913a);
+        border-radius: 50%;
+        animation: float 6s linear infinite;
+      }
+      @keyframes float {
+        0% {
+          transform: translateY(0) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-110vh) scale(1.2);
+          opacity: 0;
+        }
+      }
+      audio {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>С 8 Марта Девочки! 🎉</h1>
+      <button><a href="./8-ма.html">дальше</a></button>
+    </div>
+    <video style="display: none" controls autoplay loop>
+      <source src="./WhatsApp Video 2025-03-05 at 23.13.47.mp4" type="" />
+    </video>
+    <script>
+      function createBalloon() {
+        const balloon = document.createElement("div");
+        balloon.classList.add("balloon");
+        document.body.appendChild(balloon);
+
+        let startPositionX = Math.random() * window.innerWidth;
+        let duration = Math.random() * 5 + 5;
+
+        balloon.style.left = `${startPositionX}px`;
+        balloon.style.animationDuration = `${duration}s`;
+
+        setTimeout(() => {
+          balloon.remove();
+        }, duration * 1000);
+      }
+
+      setInterval(createBalloon, 500);
+    </script>
+  </body>
+</html>
