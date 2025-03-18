@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maze for Kids</title>
+    <link rel="stylesheet" href="./gamet.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <div class="info">
+        <div>Уровень: <span id="level">1</span></div>
+        <div>Время: <span id="timer">0</span> сек</div>
+        <div>Попытки: <span id="attempts">0</span></div>
+      </div>
+      <div class="maze-container">
+        <div class="maze" id="maze"></div>
+      </div>
+      <div class="message" id="message">Проведи шарик к финишу!</div>
+      <button class="next-level" id="nextLevel" disabled>
+        Следующий уровень
+      </button>
+    </div>
+    <audio id="winSound" src="win.mp3"></audio>
+    <audio id="loseSound" src="lose.mp3"></audio>
+    <script src="./gamet.js"></script>
+  </body>
+</html>
