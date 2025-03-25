@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Пинг-Понг для двоих</title>
+
+  </head>
+  <body>
+    <style>
+        * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    touch-action: manipulation;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #222;
+    color: white;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+.game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #111;
+}
+
+.paddle {
+    position: absolute;
+    width: 15px;
+    height: 80px;
+    background-color: white;
+    border-radius: 5px;
+}
+
+.left-paddle {
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.right-paddle {
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.ball {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: #ff5555;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.score {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2rem;
+    text-align: center;
+}
+
+.start-screen, .game-over-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+}
+
+.game-over-screen {
+    display: none;
+}
+
+.hidden {
+    display: none;
+}
+
+button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 1.2rem;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:active {
+    background-color: #45a049;
+}
+
+h1, h2 {
+    margin-bottom: 20px;
+    color: #4CAF50;
+}
+
+p {
+    margin-bottom: 10px;
+    max-width: 80%;
+}
+    </style>
+    <div class="game-container">
+      <div class="paddle left-paddle"></div>
+      <div class="paddle right-paddle"></div>
+      <div class="ball"></div>
+      <div class="score">
+        <span id="player1">0</span> : <span id="player2">0</span>
+      </div>
+      <div class="start-screen">
+        <h1>Пинг-Понг</h1>
+        <p>Касайтесь экрана слева и справа для управления платформами</p>
+        <button id="start-btn">Начать игру</button>
+      </div>
+      <div class="game-over-screen hidden">
+        <h2>Игра окончена!</h2>
+        <p id="winner-text">Игрок X победил!</p>
+        <button id="restart-btn">Играть снова</button>
+      </div>
+    </div>
+   <script>
+    document.addEventListener('DOMContentLoaded', () => {
+    // Элементы игры
+    const gameContainer = document.querySelector('.game-container');
+    const leftPaddle = document.querySelector('.left-paddle');
+    const rightPaddle = document.querySelector('.right-paddle');
+    const ball = document.querySelector('.ball');
+    const player1Score = document.getElementById('player1');
+    const player2Score = document.getElementById('player2');
+    const startScreen = document.querySelector('.start-screen');
+    const gameOverScreen = document.querySelector('.game-over-screen');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const winnerText = document.getElementById('winner-text');
+    
+    // Размеры игрового поля
+    const gameWidth = gameContainer.clientWidth;
+    const gameHeight = gameContainer.clientHeight;
+    
+    // Параметры игры
+    let ballX = gameWidth / 2;
+    let ballY = gameHeight / 2;
+    let ballSpeedX = 3;
+    let ballSpeedY = 3;
+    let leftPaddleY = gameHeight / 2;
+    let rightPaddleY = gameHeight / 2;
+    let player1Points = 0;
+    let player2Points = 0;
+    let gameRunning = false;
+    let animationId;
+    
+    // Размеры элементов
+    const paddleHeight = 80;
+    const paddleWidth = 15;
+    const ballSize = 20;
+    const paddleOffset = 10;
+    
+    // Обработчики касаний
+    let leftSideTouched = false;
+    let rightSideTouched = false;
+    let touchY = 0;
+    
+    // Начало игры
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
+    
+    // Обработка касаний
+    gameContainer.addEventListener('touchstart', handleTouchStart);
+    gameContainer.addEventListener('touchmove', handleTouchMove);
+    gameContainer.addEventListener('touchend', handleTouchEnd);
+    
+    function startGame() {
+        // Сброс параметров
+        player1Points = 0;
+        player2Points = 0;
+        player1Score.textContent = '0';
+        player2Score.textContent = '0';
+        
+        // Позиционирование мяча и платформ
+        ballX = gameWidth / 2;
+        ballY = gameHeight / 2;
+        leftPaddleY = gameHeight / 2;
+        rightPaddleY = gameHeight / 2;
+        
+        // Случайное направление мяча
+        ballSpeedX = Math.random() > 0.5 ? 3 : -3;
+        ballSpeedY = (Math.random() * 4) - 2; // От -2 до 2
+        
+        // Скрыть экраны начала/конца игры
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+        
+        // Запуск игры
+        gameRunning = true;
+        updateGame();
+    }
+    
+    function endGame(winner) {
+        gameRunning = false;
+        cancelAnimationFrame(animationId);
+        
+        winnerText.textContent = `Игрок ${winner} победил!`;
+        gameOverScreen.classList.remove('hidden');
+    }
+    
+    function updateGame() {
+        if (!gameRunning) return;
+        
+        // Движение мяча
+        ballX += ballSpeedX;
+        ballY += ballSpeedY;
+        
+        // Отскок от верхней и нижней границы
+        if (ballY <= 0 || ballY >= gameHeight - ballSize) {
+            ballSpeedY = -ballSpeedY;
+        }
+        
+        // Отскок от левой платформы
+        if (
+            ballX <= paddleOffset + paddleWidth &&
+            ballY + ballSize >= leftPaddleY - paddleHeight / 2 &&
+            ballY <= leftPaddleY + paddleHeight / 2
+        ) {
+            ballSpeedX = -ballSpeedX * 1.05; // Увеличиваем скорость после отскока
+            // Изменяем угол в зависимости от места удара
+            const hitPosition = (ballY - (leftPaddleY - paddleHeight / 2)) / paddleHeight;
+            ballSpeedY = (hitPosition - 0.5) * 8;
+        }
+        
+        // Отскок от правой платформы
+        if (
+            ballX >= gameWidth - paddleOffset - paddleWidth - ballSize &&
+            ballY + ballSize >= rightPaddleY - paddleHeight / 2 &&
+            ballY <= rightPaddleY + paddleHeight / 2
+        ) {
+            ballSpeedX = -ballSpeedX * 1.05;
+            const hitPosition = (ballY - (rightPaddleY - paddleHeight / 2)) / paddleHeight;
+            ballSpeedY = (hitPosition - 0.5) * 8;
+        }
+        
+        // Гол в левые ворота
+        if (ballX < 0) {
+            player2Points++;
+            player2Score.textContent = player2Points;
+            resetBall();
+            
+            if (player2Points >= 5) {
+                endGame(2);
+                return;
+            }
+        }
+        
+        // Гол в правые ворота
+        if (ballX > gameWidth) {
+            player1Points++;
+            player1Score.textContent = player1Points;
+            resetBall();
+            
+            if (player1Points >= 5) {
+                endGame(1);
+                return;
+            }
+        }
+        
+        // Обновление позиций элементов
+        leftPaddle.style.top = `${leftPaddleY - paddleHeight / 2}px`;
+        rightPaddle.style.top = `${rightPaddleY - paddleHeight / 2}px`;
+        ball.style.left = `${ballX}px`;
+        ball.style.top = `${ballY}px`;
+        
+        animationId = requestAnimationFrame(updateGame);
+    }
+    
+    function resetBall() {
+        ballX = gameWidth / 2;
+        ballY = gameHeight / 2;
+        ballSpeedX = Math.random() > 0.5 ? 3 : -3;
+        ballSpeedY = (Math.random() * 4) - 2;
+        
+        // Ждем секунду перед возобновлением игры
+        gameRunning = false;
+        setTimeout(() => {
+            gameRunning = true;
+            updateGame();
+        }, 1000);
+    }
+    
+    function handleTouchStart(e) {
+        e.preventDefault();
+        const touches = e.changedTouches;
+        
+        for (let i = 0; i < touches.length; i++) {
+            const touch = touches[i];
+            touchY = touch.clientY;
+            
+            if (touch.clientX < gameWidth / 2) {
+                leftSideTouched = true;
+            } else {
+                rightSideTouched = true;
+            }
+        }
+    }
+    
+    function handleTouchMove(e) {
+        e.preventDefault();
+        const touches = e.changedTouches;
+        
+        for (let i = 0; i < touches.length; i++) {
+            const touch = touches[i];
+            
+            if (leftSideTouched && touch.clientX < gameWidth / 2) {
+                leftPaddleY = touch.clientY;
+            } else if (rightSideTouched && touch.clientX >= gameWidth / 2) {
+                rightPaddleY = touch.clientY;
+            }
+        }
+    }
+    
+    function handleTouchEnd(e) {
+        e.preventDefault();
+        const touches = e.changedTouches;
+        
+        for (let i = 0; i < touches.length; i++) {
+            const touch = touches[i];
+            
+            if (touch.clientX < gameWidth / 2) {
+                leftSideTouched = false;
+            } else {
+                rightSideTouched = false;
+            }
+        }
+    }
+});
+   </script>
+  <body>
+</html>
