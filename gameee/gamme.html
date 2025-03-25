@@ -1,358 +1,1092 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>Пинг-Понг для двоих</title>
+    <title>Platformer Game</title>
+    <style>
+      body {
+        background-color: #444;
+        margin: 0;
+        padding: 0;
+        touch-action: none;
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+      }
 
+      #container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      #controls {
+        position: fixed;
+        bottom: 20px;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 20px;
+        box-sizing: border-box;
+        z-index: 100;
+      }
+
+      .control-btn {
+        width: 80px;
+        height: 80px;
+        background-color: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 30px;
+        color: white;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      #jump-btn {
+        width: 100px;
+        height: 100px;
+        background-color: rgba(251, 199, 15, 0.5);
+      }
+    </style>
   </head>
   <body>
-    <style>
-        * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    touch-action: manipulation;
-}
-
-body {
-    font-family: Arial, sans-serif;
-    background-color: #222;
-    color: white;
-    overflow: hidden;
-    height: 100vh;
-    width: 100vw;
-}
-
-.game-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background-color: #111;
-}
-
-.paddle {
-    position: absolute;
-    width: 15px;
-    height: 80px;
-    background-color: white;
-    border-radius: 5px;
-}
-
-.left-paddle {
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.right-paddle {
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.ball {
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    background-color: #ff5555;
-    border-radius: 50%;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-.score {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 2rem;
-    text-align: center;
-}
-
-.start-screen, .game-over-screen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 20px;
-}
-
-.game-over-screen {
-    display: none;
-}
-
-.hidden {
-    display: none;
-}
-
-button {
-    margin-top: 20px;
-    padding: 10px 20px;
-    font-size: 1.2rem;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-button:active {
-    background-color: #45a049;
-}
-
-h1, h2 {
-    margin-bottom: 20px;
-    color: #4CAF50;
-}
-
-p {
-    margin-bottom: 10px;
-    max-width: 80%;
-}
-    </style>
-    <div class="game-container">
-      <div class="paddle left-paddle"></div>
-      <div class="paddle right-paddle"></div>
-      <div class="ball"></div>
-      <div class="score">
-        <span id="player1">0</span> : <span id="player2">0</span>
-      </div>
-      <div class="start-screen">
-        <h1>Пинг-Понг</h1>
-        <p>Касайтесь экрана слева и справа для управления платформами</p>
-        <button id="start-btn">Начать игру</button>
-      </div>
-      <div class="game-over-screen hidden">
-        <h2>Игра окончена!</h2>
-        <p id="winner-text">Игрок X победил!</p>
-        <button id="restart-btn">Играть снова</button>
-      </div>
+    <div id="container">
+      <canvas id="gameCanvas" width="800" height="450"></canvas>
     </div>
-   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-    // Элементы игры
-    const gameContainer = document.querySelector('.game-container');
-    const leftPaddle = document.querySelector('.left-paddle');
-    const rightPaddle = document.querySelector('.right-paddle');
-    const ball = document.querySelector('.ball');
-    const player1Score = document.getElementById('player1');
-    const player2Score = document.getElementById('player2');
-    const startScreen = document.querySelector('.start-screen');
-    const gameOverScreen = document.querySelector('.game-over-screen');
-    const startBtn = document.getElementById('start-btn');
-    const restartBtn = document.getElementById('restart-btn');
-    const winnerText = document.getElementById('winner-text');
-    
-    // Размеры игрового поля
-    const gameWidth = gameContainer.clientWidth;
-    const gameHeight = gameContainer.clientHeight;
-    
-    // Параметры игры
-    let ballX = gameWidth / 2;
-    let ballY = gameHeight / 2;
-    let ballSpeedX = 3;
-    let ballSpeedY = 3;
-    let leftPaddleY = gameHeight / 2;
-    let rightPaddleY = gameHeight / 2;
-    let player1Points = 0;
-    let player2Points = 0;
-    let gameRunning = false;
-    let animationId;
-    
-    // Размеры элементов
-    const paddleHeight = 80;
-    const paddleWidth = 15;
-    const ballSize = 20;
-    const paddleOffset = 10;
-    
-    // Обработчики касаний
-    let leftSideTouched = false;
-    let rightSideTouched = false;
-    let touchY = 0;
-    
-    // Начало игры
-    startBtn.addEventListener('click', startGame);
-    restartBtn.addEventListener('click', startGame);
-    
-    // Обработка касаний
-    gameContainer.addEventListener('touchstart', handleTouchStart);
-    gameContainer.addEventListener('touchmove', handleTouchMove);
-    gameContainer.addEventListener('touchend', handleTouchEnd);
-    
-    function startGame() {
-        // Сброс параметров
-        player1Points = 0;
-        player2Points = 0;
-        player1Score.textContent = '0';
-        player2Score.textContent = '0';
-        
-        // Позиционирование мяча и платформ
-        ballX = gameWidth / 2;
-        ballY = gameHeight / 2;
-        leftPaddleY = gameHeight / 2;
-        rightPaddleY = gameHeight / 2;
-        
-        // Случайное направление мяча
-        ballSpeedX = Math.random() > 0.5 ? 3 : -3;
-        ballSpeedY = (Math.random() * 4) - 2; // От -2 до 2
-        
-        // Скрыть экраны начала/конца игры
-        startScreen.classList.add('hidden');
-        gameOverScreen.classList.add('hidden');
-        
-        // Запуск игры
-        gameRunning = true;
-        updateGame();
-    }
-    
-    function endGame(winner) {
-        gameRunning = false;
-        cancelAnimationFrame(animationId);
-        
-        winnerText.textContent = `Игрок ${winner} победил!`;
-        gameOverScreen.classList.remove('hidden');
-    }
-    
-    function updateGame() {
-        if (!gameRunning) return;
-        
-        // Движение мяча
-        ballX += ballSpeedX;
-        ballY += ballSpeedY;
-        
-        // Отскок от верхней и нижней границы
-        if (ballY <= 0 || ballY >= gameHeight - ballSize) {
-            ballSpeedY = -ballSpeedY;
+
+    <div id="controls">
+      <div class="control-btn" id="left-btn">←</div>
+      <div class="control-btn" id="jump-btn">↑</div>
+      <div class="control-btn" id="right-btn">→</div>
+    </div>
+
+    <script>
+      class Point {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
         }
-        
-        // Отскок от левой платформы
-        if (
-            ballX <= paddleOffset + paddleWidth &&
-            ballY + ballSize >= leftPaddleY - paddleHeight / 2 &&
-            ballY <= leftPaddleY + paddleHeight / 2
-        ) {
-            ballSpeedX = -ballSpeedX * 1.05; // Увеличиваем скорость после отскока
-            // Изменяем угол в зависимости от места удара
-            const hitPosition = (ballY - (leftPaddleY - paddleHeight / 2)) / paddleHeight;
-            ballSpeedY = (hitPosition - 0.5) * 8;
+      }
+
+      class OffScreenCanvas {
+        constructor(width, height) {
+          let c = document.createElement("canvas");
+          c.width = width;
+          c.height = height;
+          this.ctx = c.getContext("2d");
+          this.canvas = c;
         }
-        
-        // Отскок от правой платформы
-        if (
-            ballX >= gameWidth - paddleOffset - paddleWidth - ballSize &&
-            ballY + ballSize >= rightPaddleY - paddleHeight / 2 &&
-            ballY <= rightPaddleY + paddleHeight / 2
-        ) {
-            ballSpeedX = -ballSpeedX * 1.05;
-            const hitPosition = (ballY - (rightPaddleY - paddleHeight / 2)) / paddleHeight;
-            ballSpeedY = (hitPosition - 0.5) * 8;
+      }
+
+      class Opening {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
         }
-        
-        // Гол в левые ворота
-        if (ballX < 0) {
-            player2Points++;
-            player2Score.textContent = player2Points;
-            resetBall();
-            
-            if (player2Points >= 5) {
-                endGame(2);
-                return;
-            }
+
+        draw($) {
+          let center = this.x - $.state.pos.x,
+            l = getCirclePoint(300, 400, center - $.platform.width / 2),
+            r = getCirclePoint(300, 400, center + $.platform.width / 2);
+
+          if (l > r) {
+            let sl = getCirclePoint(280, 400, center - $.platform.width / 2),
+              sr = getCirclePoint(280, 400, center + $.platform.width / 2),
+              c = new OffScreenCanvas(800, 125),
+              sc = new OffScreenCanvas(800, 125),
+              smallDoor = drawDoor(sc, "#b9e2d7", sr, sl - sr, 125, "#262525"),
+              bigDoor = drawDoor(
+                c,
+                $.ctx.createPattern(smallDoor, "no-repeat"),
+                r,
+                l - r,
+                125
+              );
+
+            $.ctx.drawImage(bigDoor, 0, this.y + $.state.pos.y);
+          }
         }
-        
-        // Гол в правые ворота
-        if (ballX > gameWidth) {
-            player1Points++;
-            player1Score.textContent = player1Points;
-            resetBall();
-            
-            if (player1Points >= 5) {
-                endGame(1);
-                return;
-            }
+      }
+
+      function prepareGraphics() {
+        const b = "https://s3-us-west-2.amazonaws.com/s.cdpn.io/21151/";
+
+        prepareImage($, b + "c-standing.png", "standing", 0, false);
+        prepareImage($, b + "c-standing.png", "standing", 1, true);
+
+        prepareImage($, b + "c-jumping3.png", "jumpingUp", 0, false);
+        prepareImage($, b + "c-jumping3.png", "jumpingUp", 1, true);
+
+        prepareImage($, b + "c-jumpingdown.png", "jumpingDown", 0, false);
+        prepareImage($, b + "c-jumpingdown.png", "jumpingDown", 1, true);
+
+        prepareImage($, b + "Slice 1_copy.png", "runningLeft", 0, false);
+        prepareImage($, b + "Slice 1_copy.png", "runningLeft", 1, false);
+        prepareImage($, b + "c-walking3.png", "runningLeft", 2, false);
+        prepareImage($, b + "c-walking3.png", "runningLeft", 3, false);
+
+        prepareImage($, b + "Slice 1_copy.png", "runningRight", 0, true);
+        prepareImage($, b + "Slice 1_copy.png", "runningRight", 1, true);
+        prepareImage($, b + "c-walking3.png", "runningRight", 2, true);
+        prepareImage($, b + "c-walking3.png", "runningRight", 3, true);
+      }
+
+      function prepareImage($, src, type, index, flipped) {
+        let temp = new OffScreenCanvas(158, 150),
+          image = new Image();
+
+        image.onload = function () {
+          if (flipped) {
+            temp.ctx.save();
+            temp.ctx.scale(-1, 1);
+          }
+
+          temp.ctx.drawImage(image, 0, 0, 158 * (flipped ? -1 : 1), 150);
+
+          if (flipped) {
+            temp.ctx.restore();
+          }
+
+          $.animationFrames[type][index] = temp.canvas;
+        };
+
+        image.src = src;
+
+        return temp.canvas;
+      }
+
+      function drawDoor(c, color, x, width, height, bg) {
+        let y = 45;
+
+        if (bg) {
+          c.ctx.fillStyle = bg;
+          c.ctx.fillRect(0, 0, c.canvas.width, c.canvas.height);
         }
-        
-        // Обновление позиций элементов
-        leftPaddle.style.top = `${leftPaddleY - paddleHeight / 2}px`;
-        rightPaddle.style.top = `${rightPaddleY - paddleHeight / 2}px`;
-        ball.style.left = `${ballX}px`;
-        ball.style.top = `${ballY}px`;
-        
-        animationId = requestAnimationFrame(updateGame);
-    }
-    
-    function resetBall() {
-        ballX = gameWidth / 2;
-        ballY = gameHeight / 2;
-        ballSpeedX = Math.random() > 0.5 ? 3 : -3;
-        ballSpeedY = (Math.random() * 4) - 2;
-        
-        // Ждем секунду перед возобновлением игры
-        gameRunning = false;
-        setTimeout(() => {
-            gameRunning = true;
-            updateGame();
-        }, 1000);
-    }
-    
-    function handleTouchStart(e) {
-        e.preventDefault();
-        const touches = e.changedTouches;
-        
-        for (let i = 0; i < touches.length; i++) {
-            const touch = touches[i];
-            touchY = touch.clientY;
-            
-            if (touch.clientX < gameWidth / 2) {
-                leftSideTouched = true;
+
+        c.ctx.fillStyle = color;
+        c.ctx.beginPath();
+        c.ctx.moveTo(x, y);
+        c.ctx.lineTo(x, y + height);
+        c.ctx.lineTo(x + width, y + height);
+        c.ctx.lineTo(x + width, y);
+        c.ctx.ellipse(x + width / 2, y, width / 2, 45, 0, 0, Math.PI, true);
+        c.ctx.fill();
+
+        return c.canvas;
+      }
+
+      class Platform {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+          this.infront = false;
+          this.outerBox = null;
+        }
+
+        getY($) {
+          return this.y + $.state.pos.y;
+        }
+
+        isInFront($) {
+          let center = this.x - $.state.pos.x,
+            innerBox = getBox($, 300, center),
+            outerBox = getBox($, 340, center);
+
+          this.infront = outerBox.left > outerBox.right;
+          return this.infront;
+        }
+
+        drawFront($) {
+          $.ctx.fillStyle = $.colors.wood2;
+          $.ctx.fillRect(
+            this.outerBox.left,
+            this.getY($),
+            this.outerBox.width,
+            $.platform.height
+          );
+        }
+
+        draw($) {
+          let center = this.x - $.state.pos.x,
+            innerBox = getBox($, 300, center),
+            outerBox = getBox($, 340, center),
+            isLeftSide = innerBox.left > outerBox.left;
+
+          this.infront = outerBox.left > outerBox.right;
+
+          for (let dir of ["left", "right"]) {
+            let adjust = dir === "left" ? outerBox.unit : outerBox.unit * 6,
+              outer = {
+                top: {
+                  left: new Point(
+                    outerBox.left + adjust,
+                    this.getY($) + $.platform.height
+                  ),
+                  right: new Point(
+                    outerBox.left + outerBox.unit + adjust,
+                    this.getY($) + $.platform.height
+                  ),
+                },
+                bottom: {
+                  left: new Point(innerBox.left + adjust, this.getY($) + 35),
+                  right: new Point(
+                    innerBox.left + innerBox.unit + adjust,
+                    this.getY($) + 35
+                  ),
+                },
+              },
+              inner = {
+                top: {
+                  left: new Point(
+                    outerBox.left + adjust,
+                    this.getY($) + ($.platform.height - 5)
+                  ),
+                  right: new Point(
+                    outerBox.left + outerBox.unit + adjust,
+                    this.getY($) + ($.platform.height - 5)
+                  ),
+                },
+                bottom: {
+                  left: new Point(innerBox.left + adjust, this.getY($) + 30),
+                  right: new Point(
+                    innerBox.left + innerBox.unit + adjust,
+                    this.getY($) + 30
+                  ),
+                },
+              };
+
+            drawPolygon(
+              $,
+              $.colors.wood3,
+              inner.top.left,
+              inner.bottom.left,
+              inner.bottom.right,
+              inner.top.right
+            );
+            drawPolygon(
+              $,
+              $.colors.wood4,
+              outer.top.left,
+              outer.bottom.left,
+              outer.bottom.right,
+              outer.top.right
+            );
+
+            if (!isLeftSide) {
+              drawPolygon(
+                $,
+                $.colors.wood5,
+                inner.top.right,
+                outer.top.right,
+                outer.bottom.right,
+                inner.bottom.right
+              );
             } else {
-                rightSideTouched = true;
+              drawPolygon(
+                $,
+                $.colors.wood5,
+                inner.top.left,
+                outer.top.left,
+                outer.bottom.left,
+                inner.bottom.left
+              );
             }
+          }
+
+          $.ctx.fillStyle = $.colors.wood1;
+          if (isLeftSide) {
+            $.ctx.fillRect(
+              innerBox.left,
+              this.getY($),
+              outerBox.left - innerBox.left,
+              $.platform.height
+            );
+          } else {
+            $.ctx.fillRect(
+              outerBox.right,
+              this.getY($),
+              innerBox.left - outerBox.left,
+              $.platform.height
+            );
+          }
+
+          this.outerBox = outerBox;
         }
-    }
-    
-    function handleTouchMove(e) {
+      }
+
+      function drawPolygon($, color, ...points) {
+        $.ctx.fillStyle = color;
+        $.ctx.beginPath();
+        $.ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+          $.ctx.lineTo(points[i].x, points[i].y);
+        }
+        $.ctx.fill();
+      }
+
+      function getBox($, radius, center) {
+        let l = getCirclePoint(radius, 400, center - $.platform.width / 2),
+          r = getCirclePoint(radius, 400, center + $.platform.width / 2);
+
+        return {
+          left: l,
+          right: r,
+          width: r - l,
+          unit: (r - l) / 8,
+        };
+      }
+
+      var fallbackCanvas = new OffScreenCanvas(10, 10).canvas;
+
+      var $ = {
+        container: null,
+        canvas: null,
+        ctx: null,
+        platforms: [
+          new Platform(800, 300),
+          new Platform(792, 300),
+          new Platform(785, 300),
+          new Platform(770, 250),
+          new Platform(762, 250),
+          new Platform(740, 250),
+          new Platform(732, 250),
+          new Platform(717, 200),
+          new Platform(707, 135),
+          new Platform(717, 67),
+          new Platform(732, 20),
+          new Platform(740, 20),
+          new Platform(750, -40),
+          new Platform(760, -100),
+          new Platform(760, -167),
+          new Platform(745, -230),
+          new Platform(730, -267),
+          new Platform(715, -305),
+          new Platform(707, -305),
+          new Platform(685, -305),
+          new Platform(677, -305),
+          new Platform(677, -305),
+          new Platform(665, -355),
+          new Platform(652, -405),
+          new Platform(640, -455),
+          new Platform(632, -455),
+          new Platform(610, -455),
+          new Platform(602, -455),
+          new Platform(575, -455),
+          new Platform(550, -455),
+        ],
+        openings: [new Opening(800, 175), new Opening(602, -580)],
+        brick: {
+          shine: "",
+          shade: "rgba(256, 256, 256, 0.8)",
+          color: "rgba(186, 186, 173, 0.8)", // #BABAAD
+          width: 8,
+          height: 24,
+          padding: 2,
+        },
+        platform: {
+          height: 11,
+          width: 13 /* Degrees */,
+          color: "#5A4142",
+        },
+        tower: {
+          width: 600,
+          shadowWidth: 65,
+          skyWidth: 100,
+        },
+        sky: {
+          bg: "#1F0B22",
+          starSizes: [1, 1.5, 2, 2.5],
+          starColors: ["#6C586F", "#857188", "#D1BDD4", "#E6D1A8"],
+        },
+        colors: {
+          bg: "#FBD0D0",
+          wood1: "#BC8550", // side
+          wood2: "#ECC897", // front
+          wood3: "#4B3937", // back support
+          wood4: "#FFB287", // front support
+          wood5: "#D58212", // side support
+        },
+        settings: {
+          maxSpeed: 0.09, // left right
+          minSpeed: 0.01, // left right
+          friction: 0.7, // left right
+          acceleration: 0.02, // left right
+          jump: {
+            gravity: {
+              boost: 0.0014,
+              normal: 0.003,
+              down: 0.004,
+            },
+            maxSpeed: 0.6,
+            fallStartSpeed: 0.07,
+            friction: 0.98,
+          },
+        },
+        storage: {
+          bricks: null,
+          sky: null,
+          shadows: null,
+        },
+        input: {
+          left: false,
+          right: false,
+          jump: false,
+        },
+        animationFrames: {
+          standing: [fallbackCanvas, fallbackCanvas],
+          jumpingUp: [fallbackCanvas, fallbackCanvas],
+          jumpingDown: [fallbackCanvas, fallbackCanvas],
+          runningLeft: [
+            fallbackCanvas,
+            fallbackCanvas,
+            fallbackCanvas,
+            fallbackCanvas,
+          ],
+          runningRight: [
+            fallbackCanvas,
+            fallbackCanvas,
+            fallbackCanvas,
+            fallbackCanvas,
+          ],
+        },
+        savedState: null,
+        state: {
+          paused: false,
+          titles: {
+            opacity: 0,
+            ready: false,
+            text: "Game Over",
+          },
+          climbstarted: false,
+          time: null,
+          dt: null,
+          climbspeed: {
+            normal: 0.05,
+            fast: 0.12,
+          },
+          pos: {
+            x: 742,
+            y: 0,
+          },
+          activePlatforms: [],
+          jump: {
+            isGrounded: true,
+            isJumping: false,
+            isBoosting: false,
+            speed: 0,
+            nextY: 0,
+          },
+          player: {
+            dir: 1,
+            x: 362,
+            y: 175,
+            prevY: 175,
+            speed: 0,
+            animationFrame: 0,
+            animationFrameCount: 0,
+          },
+        },
+      };
+
+      $.container = document.getElementById("container");
+      $.canvas = document.getElementsByTagName("canvas")[0];
+      $.ctx = $.canvas.getContext("2d");
+
+      // Mobile controls setup
+      const leftBtn = document.getElementById("left-btn");
+      const rightBtn = document.getElementById("right-btn");
+      const jumpBtn = document.getElementById("jump-btn");
+
+      // Touch events for buttons
+      function addButtonListeners(button, action) {
+        button.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+          $.input[action] = true;
+        });
+
+        button.addEventListener("touchend", (e) => {
+          e.preventDefault();
+          $.input[action] = false;
+        });
+
+        button.addEventListener("touchcancel", (e) => {
+          e.preventDefault();
+          $.input[action] = false;
+        });
+
+        // Mouse events for testing on desktop
+        button.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          $.input[action] = true;
+        });
+
+        button.addEventListener("mouseup", (e) => {
+          e.preventDefault();
+          $.input[action] = false;
+        });
+
+        button.addEventListener("mouseleave", (e) => {
+          e.preventDefault();
+          $.input[action] = false;
+        });
+      }
+
+      addButtonListeners(leftBtn, "left");
+      addButtonListeners(rightBtn, "right");
+      addButtonListeners(jumpBtn, "jump");
+
+      // Swipe controls for better mobile experience
+      let touchStartX = 0;
+      let touchStartY = 0;
+
+      document.addEventListener("touchstart", (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      });
+
+      document.addEventListener("touchmove", (e) => {
         e.preventDefault();
-        const touches = e.changedTouches;
-        
-        for (let i = 0; i < touches.length; i++) {
-            const touch = touches[i];
-            
-            if (leftSideTouched && touch.clientX < gameWidth / 2) {
-                leftPaddleY = touch.clientY;
-            } else if (rightSideTouched && touch.clientX >= gameWidth / 2) {
-                rightPaddleY = touch.clientY;
-            }
+        const touchEndX = e.touches[0].clientX;
+        const touchEndY = e.touches[0].clientY;
+
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+
+        // Horizontal swipe
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+          $.input.left = diffX < -10;
+          $.input.right = diffX > 10;
         }
-    }
-    
-    function handleTouchEnd(e) {
-        e.preventDefault();
-        const touches = e.changedTouches;
-        
-        for (let i = 0; i < touches.length; i++) {
-            const touch = touches[i];
-            
-            if (touch.clientX < gameWidth / 2) {
-                leftSideTouched = false;
-            } else {
-                rightSideTouched = false;
-            }
+        // Vertical swipe (jump)
+        else if (diffY < -20) {
+          $.input.jump = true;
         }
-    }
-});
-   </script>
-  <body>
+      });
+
+      document.addEventListener("touchend", (e) => {
+        $.input.left = false;
+        $.input.right = false;
+        $.input.jump = false;
+      });
+
+      resize();
+      if (!$.savedState) {
+        $.savedState = JSON.parse(JSON.stringify($.state));
+      }
+
+      prepareGraphics();
+      draw();
+
+      window.addEventListener("keydown", keyDown, false);
+      window.addEventListener("keyup", keyUp, false);
+
+      function keyUp(e) {
+        move(e, false);
+      }
+
+      function keyDown(e) {
+        move(e, true);
+      }
+
+      function move(e, keyDown) {
+        if (e.keyCode === 37) $.input.left = keyDown;
+        if (e.keyCode === 39) $.input.right = keyDown;
+        if (e.keyCode === 32) $.input.jump = keyDown;
+      }
+
+      function resize() {
+        const windowRatio = window.innerWidth / window.innerHeight;
+        const gameRatio = $.canvas.width / $.canvas.height;
+
+        if (windowRatio < gameRatio) {
+          // Window is taller than game - scale based on width
+          const scale = window.innerWidth / $.canvas.width;
+          $.container.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        } else {
+          // Window is wider than game - scale based on height
+          const scale = window.innerHeight / $.canvas.height;
+          $.container.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        }
+      }
+
+      window.addEventListener("resize", function (event) {
+        resize();
+      });
+
+      function draw() {
+        let now = new Date().getTime();
+        $.state.dt = now - ($.state.time || now);
+        $.state.time = now;
+
+        if (!$.state.paused) {
+          doCalculations();
+        }
+
+        if (!$.state.paused && $.state.titles.opacity !== 100) {
+          drawSky();
+          drawPlatforms(false);
+          drawBricks();
+          drawDoors();
+          drawShadows();
+          drawPlatforms(true);
+          drawPlayer($);
+        }
+
+        if ($.state.paused) {
+          drawTitles();
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      function drawTitles() {
+        if ($.state.titles.opacity < 100) {
+          $.state.titles.opacity += Math.floor($.state.dt * 0.2);
+        }
+
+        if ($.state.titles.opacity > 100) $.state.titles.opacity = 100;
+
+        $.ctx.fillStyle = "rgba(0, 0, 0, " + $.state.titles.opacity / 100 + ")";
+        $.ctx.rect(0, 0, $.canvas.width, $.canvas.height);
+        $.ctx.fill();
+
+        $.ctx.fillStyle =
+          "rgba(251, 199, 15, " + $.state.titles.opacity / 100 + ")";
+        $.ctx.font = "48px 'Germania One', cursive";
+        $.ctx.fillText(
+          $.state.titles.text,
+          300,
+          260 - easing($.state.titles.opacity / 100) * 20
+        );
+
+        if ($.state.titles.opacity == 100 && !$.input.jump) {
+          $.state.titles.ready = true;
+        }
+
+        if ($.state.titles.ready && $.input.jump) {
+          $.state = JSON.parse(JSON.stringify($.savedState));
+        }
+      }
+
+      function easing(n) {
+        // https://github.com/component/ease
+        var s = 1.70158;
+        return --n * n * ((s + 1) * n + s) + 1;
+      }
+
+      function drawPlayer($) {
+        let drawY = $.state.player.y + $.state.pos.y - 24,
+          drawX = $.state.player.x - ($.state.player.dir ? 60 : 40);
+
+        if ($.state.jump.isJumping) {
+          if ($.state.jump.speed > 0) {
+            $.ctx.drawImage(
+              $.animationFrames.jumpingUp[$.state.player.dir],
+              drawX,
+              drawY
+            );
+          } else {
+            $.ctx.drawImage(
+              $.animationFrames.jumpingDown[$.state.player.dir],
+              drawX,
+              drawY
+            );
+          }
+        } else if ($.state.player.speed !== 0) {
+          if ($.state.player.dir) {
+            $.ctx.drawImage(
+              $.animationFrames.runningRight[$.state.player.animationFrame],
+              drawX,
+              drawY
+            );
+          } else {
+            $.ctx.drawImage(
+              $.animationFrames.runningLeft[$.state.player.animationFrame],
+              drawX,
+              drawY
+            );
+          }
+        } else {
+          $.ctx.drawImage(
+            $.animationFrames.standing[$.state.player.dir],
+            drawX,
+            drawY
+          );
+        }
+
+        $.state.player.animationFrameCount += $.state.dt;
+
+        if ($.state.player.animationFrameCount > 50) {
+          $.state.player.animationFrame += 1;
+          $.state.player.animationFrameCount = 0;
+        }
+
+        if ($.state.player.animationFrame > 3) {
+          $.state.player.animationFrame = 0;
+        }
+      }
+
+      function drawDoors() {
+        for (let i = 0; i < $.openings.length; i++) {
+          let opening = $.openings[i];
+
+          if (opening.x < $.state.pos.x - 20) continue;
+
+          if (opening.x > $.state.pos.x + 110) continue;
+
+          opening.draw($);
+        }
+      }
+
+      function drawPlatforms(drawInfrontPlatforms) {
+        if (drawInfrontPlatforms) {
+          $.state.activePlatforms = [];
+        }
+
+        for (let i = 0; i < $.platforms.length; i++) {
+          let platform = $.platforms[i];
+
+          if (platform.x < $.state.pos.x - 20) continue;
+
+          if (platform.x > $.state.pos.x + 110) continue;
+
+          if (drawInfrontPlatforms) {
+            if (platform.isInFront($)) {
+              platform.draw($);
+              $.state.activePlatforms.push(platform);
+            }
+          } else if (!platform.isInFront($)) {
+            platform.draw($);
+          }
+        }
+
+        for (let i = 0; i < $.state.activePlatforms.length; i++) {
+          $.state.activePlatforms[i].drawFront($);
+        }
+      }
+
+      function doCalculations() {
+        if ($.input.left) {
+          $.state.player.speed += $.settings.acceleration;
+        } else if ($.input.right) {
+          $.state.player.speed -= $.settings.acceleration;
+        } else if ($.state.player.speed !== 0) {
+          $.state.player.speed *= $.state.jump.isJumping
+            ? $.settings.jump.friction
+            : $.settings.friction;
+        }
+
+        if (Math.abs($.state.player.speed) > $.settings.maxSpeed) {
+          $.state.player.speed =
+            $.state.player.speed > 0
+              ? $.settings.maxSpeed
+              : -1 * $.settings.maxSpeed;
+        } else if (Math.abs($.state.player.speed) < $.settings.minSpeed) {
+          $.state.player.speed = 0;
+        }
+
+        if ($.state.player.speed !== 0) {
+          let currentSpeed = $.state.jump.isJumping
+            ? $.state.player.speed * 0.7
+            : $.state.player.speed;
+          $.state.pos.x +=
+            $.state.player.speed < 0
+              ? Math.ceil(currentSpeed * $.state.dt)
+              : Math.floor(currentSpeed * $.state.dt);
+          $.state.player.dir = currentSpeed > 0 ? 0 : 1;
+        }
+
+        if (!$.state.climbstarted && $.input.jump) {
+          $.state.climbstarted = true;
+        }
+
+        if ($.input.jump || $.state.jump.isJumping) {
+          if ($.state.jump.isGrounded) {
+            $.state.jump.isGrounded = false;
+            $.state.jump.isJumping = true;
+            $.state.jump.isBoosting = true;
+            $.state.jump.speed = $.settings.jump.maxSpeed;
+          }
+
+          if ($.state.jump.isJumping) {
+            let upwards = $.state.jump.speed > 0,
+              adjust = $.state.dt < 30 ? 30 - $.state.dt : 0; // .·´¯`(>▂<)´¯`·.
+
+            if (!upwards && $.state.jump.isBoosting) {
+              $.state.jump.isBoosting = false;
+            }
+
+            $.state.player.prevY = $.state.player.y;
+            $.state.player.y -= $.state.jump.speed * $.state.dt;
+            $.state.jump.speed -=
+              ($.settings.jump.gravity[
+                upwards
+                  ? $.state.jump.isBoosting
+                    ? "boost"
+                    : "normal"
+                  : "down"
+              ] -
+                adjust * 0.00002) *
+              $.state.dt;
+          }
+        }
+
+        if ($.state.jump.isBoosting && !$.input.jump) {
+          $.state.jump.isBoosting = false;
+        }
+
+        if ($.state.climbstarted && $.state.pos.y < 720) {
+          $.state.pos.y +=
+            ($.state.player.y + $.state.pos.y < 125
+              ? $.state.climbspeed.fast
+              : $.state.climbspeed.normal) * $.state.dt;
+        }
+
+        collisionDetection();
+
+        if ($.state.player.y + $.state.pos.y > 450) {
+          $.state.paused = true;
+        }
+      }
+
+      function collisionDetection() {
+        if ($.state.jump.isJumping && $.state.jump.speed < 0) {
+          for (let i = 0; i < $.state.activePlatforms.length; i++) {
+            let platform = $.state.activePlatforms[i];
+
+            if (Math.abs(platform.x - ($.state.pos.x + 45)) < 5) {
+              let playerFloor = $.state.player.y + 125,
+                playerFloorPrev = $.state.player.prevY + 125;
+
+              if (playerFloor > platform.y && playerFloorPrev < platform.y) {
+                $.state.player.y = platform.y - 125;
+                $.state.jump.isGrounded = true;
+                $.state.jump.isJumping = false;
+                $.state.jump.isBoosting = false;
+                $.state.jump.speed = 0;
+              }
+            }
+          }
+        } else if ($.state.jump.isGrounded) {
+          let groundToStandOnFound = false;
+
+          for (let i = 0; i < $.state.activePlatforms.length; i++) {
+            let platform = $.state.activePlatforms[i];
+
+            if (Math.abs(platform.x - ($.state.pos.x + 45)) < 5) {
+              if (platform.y - ($.state.player.y + 125) === 0) {
+                groundToStandOnFound = true;
+                break;
+              }
+            }
+          }
+
+          if (!groundToStandOnFound) {
+            $.state.jump.isGrounded = false;
+            $.state.jump.isJumping = true;
+            $.state.jump.isBoosting = true;
+            $.state.jump.speed = $.settings.jump.fallStartSpeed;
+          }
+        }
+      }
+
+      function drawSky() {
+        if ($.storage.sky == null) {
+          let height = $.canvas.height,
+            temp = new OffScreenCanvas($.canvas.width, height);
+          temp.ctx.fillStyle = $.sky.bg;
+          temp.ctx.fillRect(0, 0, $.canvas.width, height);
+
+          for (let i = 0; i < 75; i++) {
+            let starSize = Math.floor(Math.random() * $.sky.starSizes.length);
+            temp.ctx.fillStyle = $.sky.starColors[starSize];
+            temp.ctx.beginPath();
+            temp.ctx.arc(
+              Math.floor(Math.random() * $.canvas.width),
+              Math.floor(Math.random() * height),
+              $.sky.starSizes[starSize],
+              0,
+              2 * Math.PI
+            );
+            temp.ctx.fill();
+          }
+
+          $.storage.sky = temp.canvas;
+        } else {
+          let skypos = (($.state.pos.x - 1000) % 100) * 8 * -1,
+            skyYPos = $.state.pos.y % $.canvas.height;
+
+          $.ctx.drawImage($.storage.sky, skypos, skyYPos);
+          $.ctx.drawImage($.storage.sky, skypos - $.canvas.width, skyYPos);
+          $.ctx.drawImage($.storage.sky, skypos, skyYPos - $.canvas.height);
+          $.ctx.drawImage(
+            $.storage.sky,
+            skypos - $.canvas.width,
+            skyYPos - $.canvas.height
+          );
+        }
+      }
+
+      function drawShadows() {
+        if ($.storage.shadows) {
+          $.ctx.drawImage($.storage.shadows, $.tower.skyWidth, 0);
+        } else {
+          var temp = new OffScreenCanvas($.tower.width, $.canvas.height);
+          drawTowerShadow(
+            temp.ctx,
+            0,
+            $.tower.shadowWidth + 40,
+            $.canvas.height,
+            "#727C80",
+            "transparent"
+          );
+          drawTowerShadow(
+            temp.ctx,
+            0,
+            $.tower.shadowWidth,
+            $.canvas.height,
+            "#00011F",
+            "transparent"
+          );
+          drawTowerShadow(
+            temp.ctx,
+            temp.canvas.width - ($.tower.shadowWidth + 40),
+            $.tower.shadowWidth + 40,
+            $.canvas.height,
+            "transparent",
+            "#727C80"
+          );
+          drawTowerShadow(
+            temp.ctx,
+            temp.canvas.width - $.tower.shadowWidth,
+            $.tower.shadowWidth,
+            $.canvas.height,
+            "transparent",
+            "#00011F"
+          );
+          $.storage.shadows = temp.canvas;
+        }
+      }
+
+      function drawTowerShadow(ctx, start, width, height, from, to) {
+        let grd = ctx.createLinearGradient(start, 0, start + width, 0);
+        grd.addColorStop(0, from);
+        grd.addColorStop(1, to);
+
+        ctx.fillStyle = grd;
+        ctx.fillRect(start, 0, width, height);
+      }
+
+      function drawBricks() {
+        let brickRowHeight = $.brick.height * 2 + $.brick.padding * 2;
+
+        if (!$.storage.bricks) {
+          $.storage.bricks = {};
+          for (let i = 0; i < 8; i++) {
+            $.storage.bricks["brick" + i] = brickFactory(brickRowHeight, i);
+          }
+        }
+
+        for (let row = -1; row < 6; row++) {
+          $.ctx.drawImage(
+            $.storage.bricks["brick" + ($.state.pos.x % $.brick.width)],
+            $.tower.skyWidth,
+            brickRowHeight * row + ($.state.pos.y % brickRowHeight)
+          );
+        }
+      }
+
+      function brickFactory(height, pos) {
+        let temp = new OffScreenCanvas($.tower.width, height),
+          x = $.brick.padding,
+          y = $.brick.padding,
+          pointA = { x: 0, y: 0 },
+          pointB,
+          step = $.brick.width,
+          halfrow = true,
+          gradient = temp.ctx.createLinearGradient(
+            0,
+            0,
+            temp.canvas.width,
+            height
+          );
+
+        gradient.addColorStop(0, "black");
+        gradient.addColorStop(0.35, "#353637");
+        gradient.addColorStop(0.65, "#353637");
+        gradient.addColorStop(1, "black");
+
+        temp.ctx.fillStyle = gradient;
+
+        temp.ctx.fillRect(0, 0, temp.canvas.width, temp.canvas.height);
+
+        for (let i = 0; i < 2; i++) {
+          for (let j = 180 + pos; j <= 360; j += step) {
+            pointA = getCirclePoint(300, 300, j);
+
+            if (halfrow) {
+              j += step / 2;
+              halfrow = false;
+            }
+
+            pointB = getCirclePoint(300, 300, j + step);
+
+            // Main
+            temp.ctx.fillStyle = $.brick.color;
+            temp.ctx.fillRect(
+              pointA,
+              y,
+              pointB - pointA - $.brick.padding,
+              $.brick.height
+            );
+
+            // Shade
+            temp.ctx.fillStyle = $.brick.shade;
+            temp.ctx.fillRect(
+              pointA,
+              y,
+              pointB - pointA - $.brick.padding,
+              1.5
+            );
+          }
+
+          y += $.brick.padding;
+          y += $.brick.height;
+        }
+
+        return temp.canvas;
+      }
+
+      function getCirclePoint(radius, center, angle) {
+        var radian = (angle / 180) * Math.PI;
+
+        return center + radius * Math.cos(radian);
+      }
+
+      function norm(value, min, max) {
+        return (value - min) / (max - min);
+      }
+
+      function lerp(norm, min, max) {
+        return (max - min) * norm + min;
+      }
+
+      function map(value, sourceMin, sourceMax, destMin, destMax) {
+        return lerp(norm(value, sourceMin, sourceMax), destMin, destMax);
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+    </script>
+  </body>
 </html>
