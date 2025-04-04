@@ -1,29 +1,214 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dant the Man - Пиксельная Игра</title>
-    <link rel="stylesheet" href="./game.css" />
+    <title>Монстр Куб</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #000;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 10px;
+      }
+      h1 {
+        margin-bottom: 10px;
+        font-size: 28px;
+      }
+      canvas {
+        background: rgb(70, 29, 29);
+        display: block;
+        margin: 10px auto;
+        border: 2px solid black;
+        max-width: 100%;
+        touch-action: none;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 10px;
+      }
+      button {
+        margin: 5px;
+        padding: 16px 22px;
+        font-size: 24px;
+        border: none;
+        border-radius: 12px;
+        background: #444;
+        color: white;
+        cursor: pointer;
+        min-width: 60px;
+      }
+      button:active {
+        background: #666;
+      }
+      .high-score {
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
+      .difficulty,
+      .skins {
+        margin-top: 10px;
+      }
+    </style>
   </head>
   <body>
-    <div class="game-container">
-      <h1>Dant the Man</h1>
-      <div class="game-info">
-        <div class="score">Очки: <span id="score">0</span></div>
-        <div class="lives">Жизни: <span id="lives">3</span></div>
-      </div>
-      <div class="game-canvas-container">
-        <canvas id="gameCanvas"></canvas>
-      </div>
-      <div class="mobile-controls">
-        <button id="leftBtn" class="control-btn">←</button>
-        <button id="rightBtn" class="control-btn">→</button>
-        <button id="jumpBtn" class="control-btn">↑</button>
-      </div>
-      <div class="game-message" id="gameMessage"></div>
-      <button id="startBtn" class="btn">Начать игру</button>
+    <h1>МОНСТР КУБ!</h1>
+    <p class="high-score">Лучший результат: <span id="highScore">0</span></p>
+
+    <div class="difficulty">
+      <label for="difficulty">Сложность:</label>
+      <select id="difficulty">
+        <option value="easy">Легкий</option>
+        <option value="medium" selected>Средний</option>
+        <option value="hard">Сложный</option>
+      </select>
     </div>
-    <script src="./game.js"></script>
+
+    <div class="skins">
+      <label for="skins">Скин игрока:</label>
+      <select id="skins">
+        <option value="blue">Синий</option>
+        <option value="green">Зеленый</option>
+        <option value="purple">Фиолетовый</option>
+      </select>
+    </div>
+
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div class="controls">
+      <button onclick="move('up')">⬆</button>
+    </div>
+    <div class="controls">
+      <button onclick="move('left')">⬅</button>
+      <button onclick="move('down')">⬇</button>
+      <button onclick="move('right')">➡</button>
+    </div>
+    <div class="controls">
+      <button onclick="restartGame()">🔄 Начать заново</button>
+    </div>
+
+    <audio id="gameMusic" loop>
+      <source src="game-music.mp3" type="audio/mpeg" />
+    </audio>
+    <audio id="bonusSound">
+      <source
+        src="./ce91f212-711b-4466-b791-6360e67988e4_tiktok.mp4"
+        type="audio/mpeg"
+      />
+    </audio>
+
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      let player, enemy, score, keys, difficulty, playerColor, bonus;
+      let highScore = localStorage.getItem("highScore") || 0;
+      document.getElementById("highScore").textContent = highScore;
+      let gameMusic = document.getElementById("gameMusic");
+      let bonusSound = document.getElementById("bonusSound");
+
+      function initGame() {
+        difficulty = document.getElementById("difficulty").value;
+        playerColor = document.getElementById("skins").value;
+        let speedFactor =
+          difficulty === "easy" ? 0.01 : difficulty === "hard" ? 0.03 : 0.02;
+
+        player = { x: 180, y: 180, size: 20, speed: 4 };
+        enemy = { x: 50, y: 50, size: 20, speedFactor };
+        bonus = {
+          x: Math.random() * 380,
+          y: Math.random() * 380,
+          size: 15,
+          active: true,
+        };
+        score = 0;
+        keys = {};
+        gameMusic.play();
+      }
+
+      function move(direction) {
+        keys = {};
+        keys[
+          direction === "up"
+            ? "ArrowUp"
+            : direction === "down"
+            ? "ArrowDown"
+            : direction === "left"
+            ? "ArrowLeft"
+            : "ArrowRight"
+        ] = true;
+      }
+
+      function restartGame() {
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem("highScore", highScore);
+          document.getElementById("highScore").textContent = highScore;
+        }
+        initGame();
+      }
+
+      function update() {
+        if (keys["ArrowUp"] && player.y > 0) player.y -= player.speed;
+        if (keys["ArrowDown"] && player.y < canvas.height - player.size)
+          player.y += player.speed;
+        if (keys["ArrowLeft"] && player.x > 0) player.x -= player.speed;
+        if (keys["ArrowRight"] && player.x < canvas.width - player.size)
+          player.x += player.speed;
+
+        enemy.x += (player.x - enemy.x) * enemy.speedFactor;
+        enemy.y += (player.y - enemy.y) * enemy.speedFactor;
+        enemy.x = Math.max(0, Math.min(canvas.width - enemy.size, enemy.x));
+        enemy.y = Math.max(0, Math.min(canvas.height - enemy.size, enemy.y));
+
+        if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.size) {
+          alert("Ты проиграл! Очки: " + score);
+          restartGame();
+        }
+        if (
+          bonus.active &&
+          Math.hypot(player.x - bonus.x, player.y - bonus.y) < player.size
+        ) {
+          score += 50;
+          bonusSound.play();
+          bonus.active = false;
+        }
+        score++;
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = playerColor;
+        ctx.fillRect(player.x, player.y, player.size, player.size);
+
+        ctx.fillStyle = `rgba(255, 0, 0, ${
+          0.5 + Math.sin(Date.now() * 0.005) * 0.5
+        })`;
+        ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
+
+        if (bonus.active) {
+          ctx.fillStyle = "gold";
+          ctx.fillRect(bonus.x, bonus.y, bonus.size, bonus.size);
+        }
+        ctx.fillStyle = "white";
+        ctx.font = "16px Arial";
+        ctx.fillText("Очки: " + score, 10, 20);
+      }
+
+      function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+      }
+
+      initGame();
+      gameLoop();
+    </script>
   </body>
 </html>
