@@ -107,7 +107,7 @@
     <script>
       const canvas = document.getElementById("gameCanvas");
       const ctx = canvas.getContext("2d");
-      let player, enemy, score, keys, difficulty, playerColor, bonus;
+      let player, enemies, coins, score, keys, difficulty, playerColor;
       let highScore = localStorage.getItem("highScore") || 0;
       document.getElementById("highScore").textContent = highScore;
       let gameMusic = document.getElementById("gameMusic");
@@ -120,13 +120,11 @@
           difficulty === "easy" ? 0.01 : difficulty === "hard" ? 0.03 : 0.02;
 
         player = { x: 180, y: 180, size: 20, speed: 4 };
-        enemy = { x: 50, y: 50, size: 20, speedFactor };
-        bonus = {
-          x: Math.random() * 380,
-          y: Math.random() * 380,
-          size: 15,
-          active: true,
-        };
+        enemies = [
+          { x: 50, y: 50, size: 20, speedFactor },
+          { x: 350, y: 350, size: 20, speedFactor },
+        ];
+        coins = generateCoins(10); // Генерация 10 монет
         score = 0;
         keys = {};
         gameMusic.play();
@@ -154,6 +152,19 @@
         initGame();
       }
 
+      function generateCoins(number) {
+        let coinsArray = [];
+        for (let i = 0; i < number; i++) {
+          coinsArray.push({
+            x: Math.random() * (canvas.width - 20),
+            y: Math.random() * (canvas.height - 20),
+            size: 10,
+            active: true,
+          });
+        }
+        return coinsArray;
+      }
+
       function update() {
         if (keys["ArrowUp"] && player.y > 0) player.y -= player.speed;
         if (keys["ArrowDown"] && player.y < canvas.height - player.size)
@@ -162,23 +173,43 @@
         if (keys["ArrowRight"] && player.x < canvas.width - player.size)
           player.x += player.speed;
 
-        enemy.x += (player.x - enemy.x) * enemy.speedFactor;
-        enemy.y += (player.y - enemy.y) * enemy.speedFactor;
-        enemy.x = Math.max(0, Math.min(canvas.width - enemy.size, enemy.x));
-        enemy.y = Math.max(0, Math.min(canvas.height - enemy.size, enemy.y));
+        enemies.forEach((enemy) => {
+          enemy.x += (player.x - enemy.x) * enemy.speedFactor;
+          enemy.y += (player.y - enemy.y) * enemy.speedFactor;
+          enemy.x = Math.max(0, Math.min(canvas.width - enemy.size, enemy.x));
+          enemy.y = Math.max(0, Math.min(canvas.height - enemy.size, enemy.y));
+        });
 
-        if (Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.size) {
-          alert("Ты проиграл! Очки: " + score);
-          restartGame();
-        }
-        if (
-          bonus.active &&
-          Math.hypot(player.x - bonus.x, player.y - bonus.y) < player.size
-        ) {
-          score += 50;
-          bonusSound.play();
-          bonus.active = false;
-        }
+        // Проверка на столкновение с врагами
+        enemies.forEach((enemy) => {
+          if (
+            Math.hypot(player.x - enemy.x, player.y - enemy.y) < player.size
+          ) {
+            alert("Ты проиграл! Очки: " + score);
+            restartGame();
+          }
+        });
+
+        // Проверка на сбор монет
+        coins.forEach((coin, index) => {
+          if (
+            coin.active &&
+            Math.hypot(player.x - coin.x, player.y - coin.y) < player.size
+          ) {
+            score += 10; // За каждую монету даем 10 очков
+            bonusSound.play();
+            coin.active = false; // Делаем монету неактивной после сбора
+            // Генерация новой монеты на месте собранной
+            coins[index] = {
+              x: Math.random() * (canvas.width - 20),
+              y: Math.random() * (canvas.height - 20),
+              size: 10,
+              active: true,
+            };
+          }
+        });
+
+        // Увеличение счета
         score++;
       }
 
@@ -187,15 +218,25 @@
         ctx.fillStyle = playerColor;
         ctx.fillRect(player.x, player.y, player.size, player.size);
 
-        ctx.fillStyle = `rgba(255, 0, 0, ${
-          0.5 + Math.sin(Date.now() * 0.005) * 0.5
-        })`;
-        ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
+        // Рисуем врагов
+        enemies.forEach((enemy) => {
+          ctx.fillStyle = `rgba(255, 0, 0, ${
+            0.5 + Math.sin(Date.now() * 0.005) * 0.5
+          })`;
+          ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
+        });
 
-        if (bonus.active) {
-          ctx.fillStyle = "gold";
-          ctx.fillRect(bonus.x, bonus.y, bonus.size, bonus.size);
-        }
+        // Рисуем монеты
+        coins.forEach((coin) => {
+          if (coin.active) {
+            ctx.fillStyle = "yellow";
+            ctx.beginPath();
+            ctx.arc(coin.x, coin.y, coin.size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+
+        // Рисуем счет
         ctx.fillStyle = "white";
         ctx.font = "16px Arial";
         ctx.fillText("Очки: " + score, 10, 20);
