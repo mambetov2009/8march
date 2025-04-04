@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Беги от препятствий PRO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #gameCanvas {
+            background: #222;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        
+        #gameInfo {
+            margin-top: 15px;
+            font-size: 24px;
+            text-align: center;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        #startBtn {
+            padding: 12px 30px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            margin-top: 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        #startBtn:active {
+            transform: scale(0.95);
+        }
+        
+        #controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+            gap: 20px;
+        }
+        
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            user-select: none;
+            transition: background 0.2s;
+        }
+        
+        .control-btn:active {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        #gameOver {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 10;
+            width: 80%;
+            max-width: 350px;
+        }
+        
+        #speedBar {
+            width: 100%;
+            height: 5px;
+            background: #333;
+            margin-top: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        #speedProgress {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #FFC107);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .pulse {
+            animation: pulse 0.5s;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <h1 style="margin-bottom: 10px; color: #FFC107;">Беги от препятствий PRO</h1>
+    
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="gameInfo">
+        <div id="score">Очки: 0</div>
+        <div id="highScore">Рекорд: 0</div>
+    </div>
+    
+    <div id="speedBar">
+        <div id="speedProgress"></div>
+    </div>
+    
+    <div id="controls">
+        <div class="control-btn" id="leftBtn">←</div>
+        <div class="control-btn" id="rightBtn">→</div>
+    </div>
+    
+    <button id="startBtn">СТАРТ</button>
+    
+    <div id="gameOver">
+        <h2 style="color: #e94560;">ПОРАЖЕНИЕ!</h2>
+        <p id="finalScore" style="margin: 15px 0; font-size: 20px;">Счёт: 0</p>
+        <p id="maxSpeed" style="margin-bottom: 15px;">Макс. скорость: 0x</p>
+        <button id="restartBtn" style="padding: 10px 25px; background: #4CAF50; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">Играть снова</button>
+    </div>
+
+    <script>
+        // Элементы
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const highScoreDisplay = document.getElementById('highScore');
+        const speedProgress = document.getElementById('speedProgress');
+        const maxSpeedDisplay = document.getElementById('maxSpeed');
+        
+        // Настройки игры
+        const playerWidth = 50;
+        const playerHeight = 50;
+        const obstacleWidth = 40;
+        const obstacleHeight = 40;
+        
+        // Игровые переменные
+        let playerX;
+        let obstacles = [];
+        let score = 0;
+        let highScore = localStorage.getItem('highScore') || 0;
+        let gameActive = false;
+        let animationId;
+        let baseSpeed = 2;
+        let obstacleSpeed = 3;
+        let spawnRate = 60;
+        let frames = 0;
+        let speedMultiplier = 1;
+        let maxSpeedReached = 1;
+        
+        // Размеры canvas
+        function resizeCanvas() {
+            const size = Math.min(window.innerWidth - 40, 400);
+            canvas.width = size;
+            canvas.height = size * 1.5;
+            playerX = canvas.width / 2 - playerWidth / 2;
+        }
+        
+        // Игрок с анимацией
+        function drawPlayer() {
+            ctx.fillStyle = '#4CAF50';
+            ctx.shadowColor = '#4CAF50';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.roundRect(playerX, canvas.height - playerHeight - 10, playerWidth, playerHeight, 10);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Глаза игрока
+            ctx.fillStyle = 'white';
+            ctx.fillRect(playerX + 10, canvas.height - playerHeight - 5, 10, 5);
+            ctx.fillRect(playerX + 30, canvas.height - playerHeight - 5, 10, 5);
+        }
+        
+        // Препятствия с анимацией
+        function createObstacle() {
+            const x = Math.random() * (canvas.width - obstacleWidth);
+            const types = ['#e94560', '#FFC107', '#9c27b0'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            obstacles.push({
+                x: x,
+                y: -obstacleHeight,
+                width: obstacleWidth,
+                height: obstacleHeight,
+                color: type
+            });
+        }
+        
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                ctx.fillStyle = obstacle.color;
+                ctx.beginPath();
+                if (obstacle.color === '#FFC107') {
+                    // Бонусные препятствия (желтые) - треугольники
+                    ctx.moveTo(obstacle.x + obstacle.width/2, obstacle.y);
+                    ctx.lineTo(obstacle.x, obstacle.y + obstacle.height);
+                    ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+                } else {
+                    // Обычные препятствия - прямоугольники
+                    ctx.roundRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height, 5);
+                }
+                ctx.fill();
+            });
+        }
+        
+        // Обновление игры
+        function update() {
+            // Движение препятствий
+            obstacles.forEach(obstacle => {
+                obstacle.y += obstacleSpeed * speedMultiplier;
+            });
+            
+            // Удаление препятствий за пределами экрана
+            obstacles = obstacles.filter(obstacle => obstacle.y < canvas.height);
+            
+            // Проверка столкновений
+            obstacles.forEach(obstacle => {
+                if (
+                    playerX < obstacle.x + obstacle.width &&
+                    playerX + playerWidth > obstacle.x &&
+                    canvas.height - playerHeight - 10 < obstacle.y + obstacle.height &&
+                    canvas.height - 10 > obstacle.y
+                ) {
+                    if (obstacle.color === '#FFC107') {
+                        // Желтые препятствия дают бонус
+                        score += 5;
+                        document.getElementById('score').classList.add('pulse');
+                        setTimeout(() => {
+                            document.getElementById('score').classList.remove('pulse');
+                        }, 500);
+                    }
+                    endGame();
+                }
+            });
+            
+            // Увеличение сложности
+            frames++;
+            if (frames % 100 === 0) {
+                speedMultiplier += 0.1;
+                maxSpeedReached = Math.max(maxSpeedReached, speedMultiplier);
+                
+                // Обновляем индикатор скорости
+                speedProgress.style.width = `${Math.min(100, speedMultiplier * 25)}%`;
+                
+                if (frames % 200 === 0 && spawnRate > 20) {
+                    spawnRate -= 2;
+                }
+                
+                // Меняем цвет индикатора при высокой скорости
+                if (speedMultiplier > 3) {
+                    speedProgress.style.background = 'linear-gradient(90deg, #FFC107, #f44336)';
+                }
+            }
+            
+            // Генерация новых препятствий
+            if (frames % spawnRate === 0) {
+                createObstacle();
+                score++;
+                scoreDisplay.textContent = `Очки: ${score}`;
+            }
+        }
+        
+        // Отрисовка игры
+        function draw() {
+            // Фон с эффектом скорости
+            ctx.fillStyle = `hsl(${200 + speedMultiplier * 10}, 70%, 10%)`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Дорожка
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+            
+            drawObstacles();
+            drawPlayer();
+            
+            // Эффект скорости (размытие)
+            if (speedMultiplier > 2) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.02 * (speedMultiplier - 2)})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        // Игровой цикл
+        function gameLoop() {
+            update();
+            draw();
+            
+            if (gameActive) {
+                animationId = requestAnimationFrame(gameLoop);
+            }
+        }
+        
+        // Начало игры
+        function startGame() {
+            resizeCanvas();
+            playerX = canvas.width / 2 - playerWidth / 2;
+            obstacles = [];
+            score = 0;
+            frames = 0;
+            speedMultiplier = 1;
+            maxSpeedReached = 1;
+            
+            scoreDisplay.textContent = `Очки: ${score}`;
+            highScoreDisplay.textContent = `Рекорд: ${highScore}`;
+            speedProgress.style.width = '0%';
+            speedProgress.style.background = 'linear-gradient(90deg, #4CAF50, #FFC107)';
+            
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            gameActive = true;
+            
+            gameLoop();
+        }
+        
+        // Конец игры
+        function endGame() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+                highScoreDisplay.textContent = `Рекорд: ${highScore}`;
+            }
+            
+            finalScoreDisplay.textContent = `Счёт: ${score}`;
+            maxSpeedDisplay.textContent = `Макс. скорость: ${maxSpeedReached.toFixed(1)}x`;
+            gameOverScreen.style.display = 'block';
+        }
+        
+        // Управление
+        function moveLeft() {
+            playerX = Math.max(0, playerX - 20);
+        }
+        
+        function moveRight() {
+            playerX = Math.min(canvas.width - playerWidth, playerX + 20);
+        }
+        
+        // Сенсорное управление
+        leftBtn.addEventListener('touchstart', moveLeft);
+        rightBtn.addEventListener('touchstart', moveRight);
+        
+        // Для ПК
+        leftBtn.addEventListener('mousedown', moveLeft);
+        rightBtn.addEventListener('mousedown', moveRight);
+        
+        // Клавиатура
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            if (e.key === 'ArrowLeft') moveLeft();
+            if (e.key === 'ArrowRight') moveRight();
+        });
+        
+        // Кнопки
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+        
+        // Инициализация
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        highScoreDisplay.textContent = `Рекорд: ${highScore}`;
+    </script>
+</body>
+</html>
