@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Уклоняйся и Собирай!</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #111;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 10px;
+      }
+      h1 {
+        margin-bottom: 10px;
+        font-size: 28px;
+      }
+      canvas {
+        background: rgb(50, 50, 50);
+        display: block;
+        margin: 10px auto;
+        border: 2px solid black;
+        max-width: 100%;
+        touch-action: none;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 10px;
+      }
+      button {
+        margin: 5px;
+        padding: 16px 22px;
+        font-size: 24px;
+        border: none;
+        border-radius: 12px;
+        background: #444;
+        color: white;
+        cursor: pointer;
+        min-width: 60px;
+      }
+      button:active {
+        background: #666;
+      }
+      .high-score {
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Уклоняйся и Собирай!</h1>
+    <p class="high-score">Лучший результат: <span id="highScore">0</span></p>
+
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div class="controls">
+      <button onclick="move('up')">⬆</button>
+    </div>
+    <div class="controls">
+      <button onclick="move('left')">⬅</button>
+      <button onclick="move('down')">⬇</button>
+      <button onclick="move('right')">➡</button>
+    </div>
+    <div class="controls">
+      <button onclick="restartGame()">🔄 Начать заново</button>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      let player, obstacles, bonuses, score, keys, playerSpeed, highScore;
+      let gameInterval;
+
+      highScore = localStorage.getItem("highScore") || 0;
+      document.getElementById("highScore").textContent = highScore;
+
+      function initGame() {
+        player = { x: 180, y: 350, size: 20, speed: 5 };
+        obstacles = [];
+        bonuses = [];
+        score = 0;
+        keys = {};
+        playerSpeed = 5;
+
+        // Начинаем падение объектов
+        gameInterval = setInterval(gameLoop, 1000 / 60);
+      }
+
+      function move(direction) {
+        keys = {};
+        keys[
+          direction === "up"
+            ? "ArrowUp"
+            : direction === "down"
+            ? "ArrowDown"
+            : direction === "left"
+            ? "ArrowLeft"
+            : "ArrowRight"
+        ] = true;
+      }
+
+      function restartGame() {
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem("highScore", highScore);
+          document.getElementById("highScore").textContent = highScore;
+        }
+        clearInterval(gameInterval); // Останавливаем старую игру
+        initGame();
+      }
+
+      function spawnObstacle() {
+        obstacles.push({
+          x: Math.random() * (canvas.width - 20),
+          y: -20,
+          size: 20,
+          speed: Math.random() * 2 + 2,
+        });
+      }
+
+      function spawnBonus() {
+        bonuses.push({
+          x: Math.random() * (canvas.width - 10),
+          y: -10,
+          size: 10,
+          speed: Math.random() * 2 + 2,
+        });
+      }
+
+      function update() {
+        if (keys["ArrowUp"] && player.y > 0) player.y -= player.speed;
+        if (keys["ArrowDown"] && player.y < canvas.height - player.size)
+          player.y += player.speed;
+        if (keys["ArrowLeft"] && player.x > 0) player.x -= player.speed;
+        if (keys["ArrowRight"] && player.x < canvas.width - player.size)
+          player.x += player.speed;
+
+        // Обновляем позиции объектов
+        obstacles.forEach((obstacle) => {
+          obstacle.y += obstacle.speed;
+        });
+
+        bonuses.forEach((bonus) => {
+          bonus.y += bonus.speed;
+        });
+
+        // Проверка на столкновение с объектами
+        obstacles.forEach((obstacle) => {
+          if (
+            player.x < obstacle.x + obstacle.size &&
+            player.x + player.size > obstacle.x &&
+            player.y < obstacle.y + obstacle.size &&
+            player.y + player.size > obstacle.y
+          ) {
+            // Столкновение с шипом — конец игры
+            alert("Ты проиграл! Очки: " + score);
+            restartGame();
+          }
+        });
+
+        // Проверка на сбор бонусов
+        bonuses.forEach((bonus, index) => {
+          if (
+            player.x < bonus.x + bonus.size &&
+            player.x + player.size > bonus.x &&
+            player.y < bonus.y + bonus.size &&
+            player.y + player.size > bonus.y
+          ) {
+            score += 10; // За каждый бонус даем 10 очков
+            player.speed += 0.5; // Увеличиваем скорость игрока
+            bonuses.splice(index, 1); // Удаляем бонус из массива
+          }
+        });
+
+        // Генерация новых объектов
+        if (Math.random() < 0.02) spawnObstacle();
+        if (Math.random() < 0.02) spawnBonus();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Рисуем игрока
+        ctx.fillStyle = "blue";
+        ctx.fillRect(player.x, player.y, player.size, player.size);
+
+        // Рисуем шипы
+        ctx.fillStyle = "red";
+        obstacles.forEach((obstacle) => {
+          ctx.fillRect(obstacle.x, obstacle.y, obstacle.size, obstacle.size);
+        });
+
+        // Рисуем бонусы
+        ctx.fillStyle = "green";
+        bonuses.forEach((bonus) => {
+          ctx.beginPath();
+          ctx.arc(bonus.x, bonus.y, bonus.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Рисуем счет
+        ctx.fillStyle = "white";
+        ctx.font = "16px Arial";
+        ctx.fillText("Очки: " + score, 10, 20);
+      }
+
+      function gameLoop() {
+        update();
+        draw();
+      }
+
+      initGame();
+    </script>
+  </body>
+</html>
