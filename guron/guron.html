@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Цитата дня</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        font-family: "Segoe UI", sans-serif;
+        background: #2c3e50;
+        color: white;
+        overflow: hidden;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .quote-wrapper {
+        flex-grow: 1;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 10px;
+      }
+
+      .quote-card {
+        width: 100%;
+        max-width: 420px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 30px 20px;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        transition: 0.3s ease;
+      }
+
+      .quote-text {
+        font-size: 1.4rem;
+        color: #f39c12;
+        font-weight: bold;
+        line-height: 1.5;
+      }
+
+      .author {
+        margin-top: 15px;
+        font-size: 1.2rem;
+        color: #ecf0f1;
+      }
+
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        width: 100%;
+        max-width: 420px;
+        margin: 10px 0;
+      }
+
+      button {
+        flex: 1 1 45%;
+        min-width: 120px;
+        padding: 12px;
+        font-size: 1rem;
+        border: none;
+        border-radius: 25px;
+        background-color: #ff7e5f;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+      }
+
+      button:hover {
+        background-color: #eb5e41;
+      }
+
+      .saved {
+        width: 100%;
+        max-width: 420px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        padding: 10px;
+        font-size: 0.9rem;
+        color: #fff;
+        backdrop-filter: blur(8px);
+        overflow-y: auto;
+        max-height: 100px;
+        margin-bottom: 10px;
+      }
+
+      .fade-out {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      .fade-in {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      @media (max-width: 480px) {
+        .quote-text {
+          font-size: 1.2rem;
+        }
+        .author {
+          font-size: 1rem;
+        }
+        button {
+          font-size: 0.9rem;
+          padding: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body id="bodyBg">
+    <audio id="backgroundMusic" autoplay loop>
+      <source
+        src="./WhatsApp Video 2025-04-08 at 12.42.09.mp4"
+        type="audio/mp3"
+      />
+      Ваш браузер не поддерживает элемент аудио.
+    </audio>
+
+    <div class="quote-wrapper">
+      <div class="quote-card" id="card">
+        <div class="quote-text" id="quote">
+          "Начни делать — и ты уже на полпути."
+        </div>
+        <div class="author" id="author">— Теодор Рузвельт</div>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button onclick="changeQuote()">Дальше</button>
+      <button onclick="saveQuote()">Сохранить</button>
+    </div>
+
+    <div class="buttons">
+      <button onclick="shareQuote()">Поделиться</button>
+      <button onclick="copyQuotes()">📋 Копировать</button>
+    </div>
+
+    <div class="buttons">
+      <button onclick="downloadQuotes()">📥 Скачать</button>
+    </div>
+
+    <div class="saved" id="savedList"></div>
+
+    <script>
+      const quotes = [
+        {
+          text: "Воистину, добрые деяния удаляют злодеяния.” –",
+          author: "— Сура 11, аят 114",
+        },
+        {
+          text: "Мы становимся тем, о чём думаем.",
+          author: "— Эрл Найтингейл",
+        },
+        {
+          text: "Воистину, Он не любит высокомерных.” -",
+          author: "— Сура 16, аят 23",
+          bg: "#fbc2eb, #a6c1ee",
+        },
+        {
+          text: "Сложности делают нас сильнее.",
+          author: "— Фридрих Ницше",
+          bg: "#fdfbfb, #ebedee",
+        },
+        {
+          text: "Неужели он не знал, что Аллах видит его?” - ",
+          author: "— Сура 96, аят 14",
+        },
+        {
+          text: "Делай сегодня то, что другие не хотят — завтра будешь жить так, как другие не могут.",
+          author: "— неизвестен",
+        },
+        {
+          text: " Либо вы управляете вашим днем, либо день управляет вами.",
+          author: "_ Джим Рон,",
+        },
+        {
+          text: " Поистине, с трудностями приходит облегчение.» ",
+          author: "_ Коран 94:6",
+        },
+        {
+          text: " Поистине, терпение — это лучший ответ в трудные времена.» ",
+          author: "_ Коран 42:43",
+        },
+        {
+          text: " «С каждым днем становится легче, если ты проявляешь терпение.»  ",
+          author: "_ Хадис",
+        },
+        {
+          text: " «В этом мире — лишь временное наслаждение. А Вечная Жизнь — лучше для тех, кто богобоязнен.»",
+          author: "_ Коран, 4:77",
+        },
+        {
+          text: "«Воистину, Аллах не меняет положения людей, пока они не изменят самих себя.» ",
+          author: "_ Коран, 13:11",
+        },
+      ];
+
+      const quoteEl = document.getElementById("quote");
+      const authorEl = document.getElementById("author");
+      const card = document.getElementById("card");
+      const savedList = document.getElementById("savedList");
+
+      let currentIndex = 0;
+      let savedQuotes = [];
+
+      function changeQuote() {
+        card.classList.add("fade-out");
+        setTimeout(() => {
+          currentIndex = (currentIndex + 1) % quotes.length;
+          const current = quotes[currentIndex];
+          quoteEl.textContent = `"${current.text}"`;
+          authorEl.textContent = current.author;
+
+          card.classList.remove("fade-out");
+          card.classList.add("fade-in");
+          setTimeout(() => card.classList.remove("fade-in"), 300);
+        }, 300);
+      }
+
+      function saveQuote() {
+        const full = `${quoteEl.textContent} ${authorEl.textContent}`;
+        if (!savedQuotes.includes(full)) {
+          savedQuotes.push(full);
+          updateSavedList();
+        }
+      }
+
+      function updateSavedList() {
+        savedList.innerHTML =
+          "<strong>Сохранено:</strong><br>" +
+          savedQuotes.map((q) => `• ${q}`).join("<br>");
+      }
+
+      function shareQuote() {
+        const text = `${quoteEl.textContent} ${authorEl.textContent}`;
+        if (navigator.share) {
+          navigator
+            .share({
+              title: "Цитата дня",
+              text: text,
+            })
+            .catch((err) => console.log("Ошибка при шаринге:", err));
+        } else {
+          alert("Поделиться можно только на телефоне (или скопируй вручную).");
+        }
+      }
+
+      function downloadQuotes() {
+        if (savedQuotes.length === 0) return alert("Нет сохранённых цитат.");
+        const content = savedQuotes.join("\n\n");
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "цитаты.txt";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      function copyQuotes() {
+        if (savedQuotes.length === 0) return alert("Нет сохранённых цитат.");
+        const text = savedQuotes.join("\n\n");
+        navigator.clipboard
+          .writeText(text)
+          .then(() => alert("Цитаты скопированы в буфер!"))
+          .catch(() => alert("Не удалось скопировать."));
+      }
+    </script>
+  </body>
+</html>
